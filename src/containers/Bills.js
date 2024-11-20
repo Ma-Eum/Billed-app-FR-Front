@@ -43,8 +43,8 @@ export default class {
                     }));
 
                  // Log sorted dates
-                 console.log("Sorted bills for UI:", bills.map(bill => bill.date));
-                 
+                 // console.log("Sorted bills for UI:", bills.map(bill => bill.date));
+
                 return bills;
             });
     }
