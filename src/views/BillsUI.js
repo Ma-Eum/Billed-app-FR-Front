@@ -19,9 +19,19 @@ const row = (bill) => {
     `)
   }
 
+// Helper function to render all rows after sorting bills by date
 const rows = (data) => {
-  return (data && data.length) ? data.map(bill => row(bill)).join("") : ""
-}
+  if (data && data.length) {
+    // Sort bills by date in descending order before rendering
+    const sortedData = data.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    // Log to verify the order of bills
+    // console.log("Sorted bills in BillsUI:", sortedData.map(bill => bill.date));
+
+    return sortedData.map(bill => row(bill)).join("");
+  }
+  return "";
+};
 
 export default ({ data: bills, loading, error }) => {
   
