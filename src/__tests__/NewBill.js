@@ -1,101 +1,100 @@
-import { ROUTES_PATH } from "../constants/routes.js";
-import Logout from "./Logout.js";
+/**
+ * @jest-environment jsdom
+ */
 
-export default class NewBill {
-  constructor({ document, onNavigate, store, localStorage }) {
-    this.document = document;
-    this.onNavigate = onNavigate;
-    this.store = store;
-    const formNewBill = this.document.querySelector(
-      `form[data-testid="form-new-bill"]`
+import { fireEvent, screen } from "@testing-library/dom";
+import NewBill from "../containers/NewBill";
+import NewBillUI from "../views/NewBillUI";
+import mockStore from "../__mocks__/store";
+import { localStorageMock } from "../__mocks__/localStorage";
+
+jest.mock("../app/store", () => mockStore);
+
+describe("Given I am connected as an employee", () => {
+  beforeEach(() => {
+    Object.defineProperty(window, "localStorage", { value: localStorageMock });
+    window.localStorage.setItem(
+      "user",
+      JSON.stringify({ type: "Employee", email: "employee@test.com" })
     );
-    formNewBill.addEventListener("submit", this.handleSubmit);
+    document.body.innerHTML = NewBillUI();
+  });
 
-    const file = this.document.querySelector(`input[data-testid="file"]`);
-    file.addEventListener("change", this.handleChangeFile);
+  describe("When I upload a file", () => {
+    test("Then it should accept valid file types (jpg, jpeg, png)", () => {
+      const onNavigate = jest.fn();
+      const newBill = new NewBill({
+        document,
+        onNavigate,
+        store: mockStore,
+        localStorage: window.localStorage,
+      });
 
-    this.fileUrl = null;
-    this.fileName = null;
-    this.billId = null;
+      const fileInput = screen.getByTestId("file");
+      const validFile = new File(["content"], "image.jpg", { type: "image/jpeg" });
 
-    new Logout({ document, localStorage, onNavigate });
-  }
+      const alertSpy = jest.spyOn(window, "alert").mockImplementation(() => {});
+      fireEvent.change(fileInput, { target: { files: [validFile] } });
 
-  handleChangeFile = (e) => {
-    e.preventDefault();
+      expect(alertSpy).not.toHaveBeenCalled();
+      expect(fileInput.files[0]).toEqual(validFile);
+    });
 
-    const file = e.target.files[0]; // Get the uploaded file
-    const fileName = file.name.toLowerCase(); // Convert filename to lowercase for consistency
-    const allowedExtensions = ["jpg", "jpeg", "png"]; // Allowed extensions
-    const fileExtension = fileName.split(".").pop(); // Extract the file extension
+    test("Then it should reject invalid file types (e.g., pdf)", () => {
+      const onNavigate = jest.fn();
+      const newBill = new NewBill({
+        document,
+        onNavigate,
+        store: mockStore,
+        localStorage: window.localStorage,
+      });
 
-    // Validate the file extension
-    if (!allowedExtensions.includes(fileExtension)) {
-      alert("Seuls les fichiers au format JPG, JPEG ou PNG sont acceptés."); // Show alert if the file is invalid
-      e.target.value = ""; // Reset the input value
-      return;
-    }
+      const fileInput = screen.getByTestId("file");
+      const invalidFile = new File(["content"], "document.pdf", { type: "application/pdf" });
 
-    const formData = new FormData();
-    const email = JSON.parse(localStorage.getItem("user")).email;
+      const alertSpy = jest.spyOn(window, "alert").mockImplementation(() => {});
+      fireEvent.change(fileInput, { target: { files: [invalidFile] } });
 
-    formData.append("file", file);
-    formData.append("email", email);
+      expect(alertSpy).toHaveBeenCalledWith(
+        "Seuls les fichiers au format JPG, JPEG ou PNG sont acceptés."
+      );
+      expect(fileInput.value).toBe("");
+    });
+  });
 
-    this.store
-      .bills()
-      .create({
-        data: formData,
-        headers: {
-          noContentType: true,
-        },
-      })
-      .then(({ fileUrl, key }) => {
-        this.billId = key; // Save the unique key of the uploaded file
-        this.fileUrl = fileUrl; // Save the URL of the uploaded file
-        this.fileName = fileName; // Save the filename
-      })
-      .catch((error) => console.error(error));
-  };
+  describe("When I submit the form", () => {
+    test("Then it should call updateBill with correct data", () => {
+      const onNavigate = jest.fn();
+      const newBill = new NewBill({
+        document,
+        onNavigate,
+        store: mockStore,
+        localStorage: window.localStorage,
+      });
 
-  handleSubmit = (e) => {
-    e.preventDefault();
+      const form = screen.getByTestId("form-new-bill");
+      const mockUpdateBill = jest.spyOn(newBill, "updateBill");
 
-    const email = JSON.parse(localStorage.getItem("user")).email;
-    const bill = {
-      email,
-      type: e.target.querySelector(`select[data-testid="expense-type"]`).value, // Type of expense
-      name: e.target.querySelector(`input[data-testid="expense-name"]`).value, // Name of expense
-      amount: parseInt(
-        e.target.querySelector(`input[data-testid="amount"]`).value
-      ), // Expense amount
-      date: e.target.querySelector(`input[data-testid="datepicker"]`).value, // Date of expense
-      vat: e.target.querySelector(`input[data-testid="vat"]`).value, // VAT value
-      pct:
-        parseInt(e.target.querySelector(`input[data-testid="pct"]`).value) ||
-        20, // Percentage (default to 20 if not provided)
-      commentary: e.target.querySelector(
-        `textarea[data-testid="commentary"]`
-      ).value, // Commentary
-      fileUrl: this.fileUrl, // URL of the uploaded file
-      fileName: this.fileName, // Name of the uploaded file
-      status: "pending", // Set the status to pending
-    };
+      fireEvent.change(screen.getByTestId("expense-name"), {
+        target: { value: "Test expense" },
+      });
+      fireEvent.change(screen.getByTestId("datepicker"), {
+        target: { value: "2023-11-01" },
+      });
+      fireEvent.change(screen.getByTestId("amount"), {
+        target: { value: "100" },
+      });
 
-    this.updateBill(bill); // Update the bill
-    this.onNavigate(ROUTES_PATH["Bills"]); // Navigate to the Bills page
-  };
+      fireEvent.submit(form);
 
-  // Method to update a bill (not covered by tests)
-  updateBill = (bill) => {
-    if (this.store) {
-      this.store
-        .bills()
-        .update({ data: JSON.stringify(bill), selector: this.billId })
-        .then(() => {
-          this.onNavigate(ROUTES_PATH["Bills"]);
+      expect(mockUpdateBill).toHaveBeenCalled();
+      expect(mockUpdateBill).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "Test expense",
+          date: "2023-11-01",
+          amount: 100,
         })
-        .catch((error) => console.error(error));
-    }
-  };
-}
+      );
+    });
+  });
+});

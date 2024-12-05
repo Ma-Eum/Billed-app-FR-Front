@@ -1,4 +1,4 @@
-import { ROUTES_PATH } from '../constants/routes.js';
+import { ROUTES_PATH } from "../constants/routes.js";
 import Logout from "./Logout.js";
 
 export default class NewBill {
@@ -16,79 +16,97 @@ export default class NewBill {
     new Logout({ document, localStorage, onNavigate });
   }
 
-  // Handler for the file input change event
-  handleChangeFile = e => {
+  // Gestion du changement de fichier
+  handleChangeFile = (e) => {
     e.preventDefault();
     const fileInput = this.document.querySelector(`input[data-testid="file"]`);
-    const file = fileInput.files[0]; // Get the selected file
-    const filePath = e.target.value.split(/\\/g); // Get the file path
-    const fileName = filePath[filePath.length - 1]; // Extract the file name from the path
+    const file = fileInput.files[0]; // Récupère le fichier sélectionné
 
-    // List of allowed file extensions
+    if (!file) {
+      console.error("Aucun fichier sélectionné.");
+      return;
+    }
+
     const allowedExtensions = ["jpg", "jpeg", "png"];
-    const fileExtension = fileName.split(".").pop().toLowerCase(); // Extract and normalize file extension
+    const allowedMimeTypes = ["image/jpeg", "image/png"];
 
-    // Check if the file extension is not in the allowed list
-    if (!allowedExtensions.includes(fileExtension)) {
-      alert("Seuls les fichiers au format JPG, JPEG ou PNG sont acceptés."); // Show an alert
-      fileInput.value = ""; // Reset the input field
-      return; // Exit the function
+    const fileName = file.name;
+    const fileExtension = fileName.split(".").pop().toLowerCase();
+    const fileType = file.type;
+
+    console.log("Nom du fichier :", fileName);
+    console.log("Extension :", fileExtension);
+    console.log("Type MIME :", fileType);
+
+    // Validation stricte des fichiers
+    if (!allowedExtensions.includes(fileExtension) || !allowedMimeTypes.includes(fileType)) {
+      alert("Seuls les fichiers au format JPG, JPEG ou PNG sont acceptés.");
+      fileInput.value = ""; // Réinitialise l'entrée du fichier
+      return;
     }
 
     const formData = new FormData();
     const email = JSON.parse(localStorage.getItem("user")).email;
-    formData.append('file', file); // Append the file to the form data
-    formData.append('email', email); // Append the user's email to the form data
+    formData.append("file", file);
+    formData.append("email", email);
 
-    // Upload the file to the server
+    // Téléchargement du fichier
     this.store
       .bills()
       .create({
         data: formData,
         headers: {
-          noContentType: true
-        }
+          noContentType: true,
+        },
       })
       .then(({ fileUrl, key }) => {
-        this.billId = key; // Save the bill ID
-        this.fileUrl = fileUrl; // Save the file URL
-        this.fileName = fileName; // Save the file name
+        console.log("Fichier téléchargé avec succès :", fileUrl);
+        this.billId = key;
+        this.fileUrl = fileUrl;
+        this.fileName = fileName;
       })
-      .catch(error => console.error(error));
-  }
+      .catch((error) => {
+        console.error("Erreur lors de l'envoi du fichier :", error);
+        alert("Une erreur est survenue lors du téléchargement du fichier.");
+      });
+  };
 
-  // Handler for the form submission event
-  handleSubmit = e => {
-    e.preventDefault(); // Prevent the default form submission behavior
+  // Gestion de la soumission du formulaire
+  handleSubmit = (e) => {
+    e.preventDefault();
     const email = JSON.parse(localStorage.getItem("user")).email;
+
     const bill = {
       email,
-      type: e.target.querySelector(`select[data-testid="expense-type"]`).value, // Get the expense type
-      name: e.target.querySelector(`input[data-testid="expense-name"]`).value, // Get the expense name
-      amount: parseInt(e.target.querySelector(`input[data-testid="amount"]`).value), // Get the amount
-      date: e.target.querySelector(`input[data-testid="datepicker"]`).value, // Get the date
-      vat: e.target.querySelector(`input[data-testid="vat"]`).value, // Get the VAT
-      pct: parseInt(e.target.querySelector(`input[data-testid="pct"]`).value) || 20, // Get the percentage or default to 20
-      commentary: e.target.querySelector(`textarea[data-testid="commentary"]`).value, // Get the commentary
-      fileUrl: this.fileUrl, // Get the uploaded file URL
-      fileName: this.fileName, // Get the uploaded file name
-      status: 'pending' // Set the status to pending
+      type: e.target.querySelector(`select[data-testid="expense-type"]`).value, // Récupère le type de dépense
+      name: e.target.querySelector(`input[data-testid="expense-name"]`).value, // Récupère le nom de la dépense
+      amount: parseInt(e.target.querySelector(`input[data-testid="amount"]`).value), // Récupère le montant
+      date: e.target.querySelector(`input[data-testid="datepicker"]`).value, // Récupère la date
+      vat: e.target.querySelector(`input[data-testid="vat"]`).value, // Récupère la TVA
+      pct: parseInt(e.target.querySelector(`input[data-testid="pct"]`).value) || 20, // Récupère le pourcentage ou valeur par défaut
+      commentary: e.target.querySelector(`textarea[data-testid="commentary"]`).value, // Récupère le commentaire
+      fileUrl: this.fileUrl, // URL du fichier téléchargé
+      fileName: this.fileName, // Nom du fichier téléchargé
+      status: "pending", // Statut de la note de frais
     };
-    this.updateBill(bill); // Update the bill with the new data
-    this.onNavigate(ROUTES_PATH['Bills']); // Navigate to the bills page
-  }
 
-  // Function to update a bill
-  // Not covered by tests
+    this.updateBill(bill);
+    this.onNavigate(ROUTES_PATH["Bills"]); // Redirection vers la page des notes de frais
+  };
+
+  // Mise à jour de la note de frais
   updateBill = (bill) => {
     if (this.store) {
       this.store
         .bills()
-        .update({ data: JSON.stringify(bill), selector: this.billId }) // Send the updated bill data
-        .then(() => {
-          this.onNavigate(ROUTES_PATH['Bills']); // Navigate to the bills page
+        .update({
+          data: JSON.stringify(bill),
+          selector: this.billId,
         })
-        .catch(error => console.error(error));
+        .then(() => {
+          this.onNavigate(ROUTES_PATH["Bills"]);
+        })
+        .catch((error) => console.error("Erreur lors de la mise à jour :", error));
     }
-  }
+  };
 }
