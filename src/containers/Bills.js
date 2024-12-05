@@ -1,7 +1,7 @@
 import { ROUTES_PATH } from '../constants/routes.js'
 import { formatDate, formatStatus } from "../app/format.js"
 import Logout from "./Logout.js"
-
+ 
 export default class {
   constructor({ document, onNavigate, store, localStorage }) {
     this.document = document
@@ -15,18 +15,18 @@ export default class {
     })
     new Logout({ document, localStorage, onNavigate })
   }
-
+ 
   handleClickNewBill = () => {
     this.onNavigate(ROUTES_PATH['NewBill'])
   }
-
+ 
   handleClickIconEye = (icon) => {
     const billUrl = icon.getAttribute("data-bill-url")
     const imgWidth = Math.floor($('#modaleFile').width() * 0.5)
     $('#modaleFile').find(".modal-body").html(`<div style='text-align: center;' class="bill-proof-container"><img width=${imgWidth} src=${billUrl} alt="Bill" /></div>`)
     $('#modaleFile').modal('show')
   }
-
+ 
   getBills = () => {
     if (this.store) {
         return this.store
@@ -41,14 +41,12 @@ export default class {
                         date: doc.date, // Keep dates in "YYYY-MM-DD" format to match the test expectations
                         status: formatStatus(doc.status)
                     }));
-
+ 
                  // Log sorted dates
                  // console.log("Sorted bills for UI:", bills.map(bill => bill.date));
-
+ 
                 return bills;
             });
     }
 };
-
-  
 }
