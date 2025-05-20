@@ -7,22 +7,39 @@ export default class Bills {
     this.document = document;
     this.onNavigate = onNavigate;
     this.store = store;
+    this.localStorage = localStorage;
+
+    // Redirige si l'utilisateur n'est pas connecté
+    const user = JSON.parse(this.localStorage.getItem("user"));
+    if (!user) {
+      this.onNavigate(ROUTES_PATH.Login);
+      return;
+    }
 
     const buttonNewBill = this.document.querySelector(`button[data-testid="btn-new-bill"]`);
-    if (buttonNewBill) buttonNewBill.addEventListener("click", this.handleClickNewBill);
+    if (buttonNewBill) {
+      buttonNewBill.addEventListener("click", this.handleClickNewBill);
+    }
 
     const iconEye = this.document.querySelectorAll(`div[data-testid="icon-eye"]`);
-    if (iconEye) {
+    if (iconEye.length > 0) {
       iconEye.forEach((icon) => {
         icon.addEventListener("click", () => this.handleClickIconEye(icon));
       });
     }
 
-    new Logout({ document, localStorage, onNavigate });
+    // Déconnexion
+    const logoutButton = this.document.querySelector("#layout-disconnect");
+    if (logoutButton) {
+      logoutButton.addEventListener("click", () => {
+        this.localStorage.clear();
+        this.onNavigate(ROUTES_PATH.Login);
+      });
+    }
   }
 
   handleClickNewBill = () => {
-    this.onNavigate(ROUTES_PATH["NewBill"]);
+    this.onNavigate(ROUTES_PATH.NewBill);
   };
 
   handleClickIconEye = (icon) => {
@@ -36,7 +53,8 @@ export default class Bills {
           <img width=${imgWidth} src=${billUrl} alt="Bill" />
         </div>`;
     }
-    $("#modaleFile").modal("show"); // Cette ligne fonctionnera avec le mock dans setup-jest.js
+
+    $("#modaleFile").modal("show");
   };
 
   getBills = async () => {
