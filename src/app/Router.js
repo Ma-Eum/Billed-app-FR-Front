@@ -10,6 +10,43 @@ import DashboardUI from "../views/DashboardUI.js";
 import { ROUTES, ROUTES_PATH } from "../constants/routes.js";
 
 export default () => {
+  const updateActiveIcon = (pathname) => {
+    const icon1 = document.getElementById("layout-icon1");
+    const icon2 = document.getElementById("layout-icon2");
+
+    if (icon1) icon1.classList.remove("active-icon");
+    if (icon2) icon2.classList.remove("active-icon");
+
+    if (pathname === ROUTES_PATH.Bills && icon1) {
+      icon1.classList.add("active-icon");
+      console.log("✅ icon1 devient active");
+    }
+
+    if (pathname === ROUTES_PATH.NewBill && icon2) {
+      icon2.classList.add("active-icon");
+      console.log("✅ icon2 devient active");
+    }
+  };
+
+  const attachSidebarEvents = (onNavigate) => {
+    const iconWindow = document.getElementById("layout-icon1");
+    const iconMail = document.getElementById("layout-icon2");
+
+    if (iconWindow) {
+      iconWindow.onclick = () => {
+        console.log("🏠 Icône Window cliquée");
+        onNavigate(ROUTES_PATH.Bills);
+      };
+    }
+
+    if (iconMail) {
+      iconMail.onclick = () => {
+        console.log("✉️ Icône Mail cliquée");
+        onNavigate(ROUTES_PATH.NewBill);
+      };
+    }
+  };
+
   window.onload = () => {
     const rootDiv = document.getElementById("root");
 
@@ -17,21 +54,11 @@ export default () => {
       window.history.pushState({}, pathname, window.location.origin + pathname);
       window.location.hash = pathname;
 
-      // 🔁 Supprime l’icône active actuelle
-      const icon1 = document.getElementById("layout-icon1");
-      const icon2 = document.getElementById("layout-icon2");
-
-      if (icon1) icon1.classList.remove("active-icon");
-      if (icon2) icon2.classList.remove("active-icon");
-
-      // ✅ Active l’icône correspondante
-      if (pathname === ROUTES_PATH.Bills && icon1) icon1.classList.add("active-icon");
-      if (pathname === ROUTES_PATH.NewBill && icon2) icon2.classList.add("active-icon");
-
       if (pathname === ROUTES_PATH.Login) {
         rootDiv.innerHTML = ROUTES({ pathname });
         document.body.style.backgroundColor = "#0E5AE5";
         new Login({ document, localStorage, onNavigate, store });
+        updateActiveIcon(pathname);
       }
 
       else if (pathname === ROUTES_PATH.Bills) {
@@ -40,14 +67,19 @@ export default () => {
         bills.getBills().then((data) => {
           rootDiv.innerHTML = BillsUI({ data });
           new Bills({ document, onNavigate, store, localStorage });
+          attachSidebarEvents(onNavigate);
+          updateActiveIcon(pathname);
         }).catch((error) => {
           rootDiv.innerHTML = ROUTES({ pathname, error });
         });
       }
 
       else if (pathname === ROUTES_PATH.NewBill) {
+        console.log("🔁 REDIRECTION VERS NEW BILL");
         rootDiv.innerHTML = ROUTES({ pathname, loading: true });
         new NewBill({ document, onNavigate, store, localStorage });
+        attachSidebarEvents(onNavigate);
+        updateActiveIcon(pathname);
       }
 
       else if (pathname === ROUTES_PATH.Dashboard) {
@@ -56,6 +88,8 @@ export default () => {
         dashboard.getBillsAllUsers().then((bills) => {
           rootDiv.innerHTML = DashboardUI({ data: { bills } });
           new Dashboard({ document, onNavigate, store, bills, localStorage });
+          attachSidebarEvents(onNavigate);
+          updateActiveIcon(pathname);
         }).catch((error) => {
           rootDiv.innerHTML = ROUTES({ pathname, error });
         });
@@ -64,23 +98,7 @@ export default () => {
 
     window.onNavigate = onNavigate;
 
-    // 🔁 Liens de la barre latérale
-    const iconWindow = document.getElementById("layout-icon1");
-    const iconMail = document.getElementById("layout-icon2");
-
-    if (iconWindow) {
-  iconWindow.onclick = () => {
-    onNavigate(ROUTES_PATH.Bills); // renvoie vers page des notes de frais
-  };
-}
-
-if (iconMail) {
-  iconMail.onclick = () => {
-    onNavigate(ROUTES_PATH.NewBill); // renvoie vers la création d’une note
-  };
-}
-
-    // ✅ Redirection initiale
+    // Redirection initiale
     const hash = window.location.hash;
     const user = JSON.parse(localStorage.getItem("user"));
 

@@ -19,16 +19,47 @@
   transform: rotate(-90deg);
 }
 
-#layout-icon1 {
+#layout-icon1,
+#layout-icon2 {
   position: relative;
   text-align: center;
+  cursor: pointer;
+  padding: 10px; /* ✅ pour rendre le fond cliquable autour de l’icône */
+  margin: 0 auto; /* ✅ centre les icônes dans la barre */
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+/* Position des icônes dans la barre */
+#layout-icon1 {
   top: 170px;
 }
 
 #layout-icon2 {
-  position: relative;
-  text-align: center;
   top: 220px;
+}
+
+/* ✅ Effet au survol */
+#layout-icon1:hover,
+#layout-icon2:hover {
+  background-color: #86B2F1;
+}
+
+/* ✅ Style quand la page est active */
+.active-icon {
+  background-color: #86B2F1;
+  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: auto;
 }
 
 #layout-disconnect {
@@ -37,15 +68,4 @@
   cursor: pointer;
   bottom: 20px;
   left: 30px;
-}
-
-.active-icon {
-  background-color: #7bb1f7;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin:auto;
-  border-radius: 8px;
 }
