@@ -2,61 +2,69 @@
  * @jest-environment jsdom
  */
 
-import { screen, fireEvent } from "@testing-library/dom";
 import LoginUI from "../views/LoginUI.js";
 import Login from "../containers/Login.js";
-import { ROUTES_PATH } from "../constants/routes.js";
-import { localStorageMock } from "../__mocks__/localStorage.js";
+import { fireEvent, screen } from "@testing-library/dom";
 
-describe("Given I am on the Login page", () => {
+describe("Given I am on the login page", () => {
+  let onNavigate;
+
   beforeEach(() => {
-    // Mock localStorage
-    Object.defineProperty(window, "localStorage", { value: localStorageMock });
-    window.localStorage.setItem(
-      "user",
-      JSON.stringify({
-        type: "Employee",
-      })
-    );
+    // Simule une navigation
+    onNavigate = jest.fn();
+    document.body.innerHTML = LoginUI();
+
+    // Instancie Login après injection DOM
+    new Login({ document, localStorage: window.localStorage, onNavigate });
   });
 
-  describe("When I fill the employee form with valid data", () => {
-    test("Then I should be logged in as an employee", () => {
-      const html = LoginUI();
-      document.body.innerHTML = html;
-
-      const inputEmail = screen.getByTestId("employee-email-input");
-      const inputPassword = screen.getByTestId("employee-password-input");
+  describe("When I submit the employee login form with valid credentials", () => {
+    test("Then I should be redirected to the Bills page", () => {
+      const emailInput = screen.getByTestId("employee-email-input");
+      const passwordInput = screen.getByTestId("employee-password-input");
       const form = screen.getByTestId("form-employee");
 
-      fireEvent.change(inputEmail, { target: { value: "employee@test.com" } });
-      fireEvent.change(inputPassword, { target: { value: "password123" } });
+      fireEvent.change(emailInput, { target: { value: "employee@test.com" } });
+      fireEvent.change(passwordInput, { target: { value: "employee123" } });
 
-      const handleSubmit = jest.fn((e) => e.preventDefault());
-      form.addEventListener("submit", handleSubmit);
       fireEvent.submit(form);
 
-      expect(handleSubmit).toHaveBeenCalled();
+      const user = JSON.parse(window.localStorage.getItem("user"));
+      expect(user.type).toBe("Employee");
+      expect(onNavigate).toHaveBeenCalledWith("#employee/bills");
     });
   });
 
-  describe("When I fill the admin form with valid data", () => {
-    test("Then I should be logged in as an admin", () => {
-      const html = LoginUI();
-      document.body.innerHTML = html;
-
-      const inputEmail = screen.getByTestId("admin-email-input");
-      const inputPassword = screen.getByTestId("admin-password-input");
+  describe("When I submit the admin login form with valid credentials", () => {
+    test("Then I should be redirected to the Dashboard page", () => {
+      const emailInput = screen.getByTestId("admin-email-input");
+      const passwordInput = screen.getByTestId("admin-password-input");
       const form = screen.getByTestId("form-admin");
 
-      fireEvent.change(inputEmail, { target: { value: "admin@test.com" } });
-      fireEvent.change(inputPassword, { target: { value: "adminpassword" } });
+      fireEvent.change(emailInput, { target: { value: "admin@test.com" } });
+      fireEvent.change(passwordInput, { target: { value: "admin123" } });
 
-      const handleSubmit = jest.fn((e) => e.preventDefault());
-      form.addEventListener("submit", handleSubmit);
       fireEvent.submit(form);
 
-      expect(handleSubmit).toHaveBeenCalled();
+      const user = JSON.parse(window.localStorage.getItem("user"));
+      expect(user.type).toBe("Admin");
+      expect(onNavigate).toHaveBeenCalledWith("#admin/dashboard");
+    });
+  });
+
+  describe("When I submit forms with empty inputs", () => {
+    test("Then it should not set localStorage or navigate", () => {
+      const form = screen.getByTestId("form-employee");
+      const emailInput = screen.getByTestId("employee-email-input");
+      const passwordInput = screen.getByTestId("employee-password-input");
+
+      fireEvent.change(emailInput, { target: { value: "" } });
+      fireEvent.change(passwordInput, { target: { value: "" } });
+
+      fireEvent.submit(form);
+
+      expect(window.localStorage.getItem("user")).toBe(null);
+      expect(onNavigate).not.toHaveBeenCalled();
     });
   });
 });

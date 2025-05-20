@@ -2,77 +2,50 @@
  * @jest-environment jsdom
  */
 
-import { ROUTES, ROUTES_PATH } from "../constants/routes"
-import { screen } from "@testing-library/dom"
+import { ROUTES, ROUTES_PATH } from "../constants/routes";
+import LoginUI from "../views/LoginUI.js";
+import BillsUI from "../views/BillsUI.js";
+import NewBillUI from "../views/NewBillUI.js";
+import DashboardUI from "../views/DashboardUI.js";
 
-const data = []
-const loading = false
-const error = null
+describe("ROUTES function", () => {
+  beforeEach(() => {
+    // Simule un utilisateur employé connecté
+    window.localStorage.setItem(
+      "user",
+      JSON.stringify({ type: "Employee", email: "employee@test.com" })
+    );
+  });
 
-describe('Given I am connected and I am on some page of the app', () => {
-  describe('When I navigate to Login page', () => {
-    test(('Then, it should render Login page'), () => {
-      const pathname = ROUTES_PATH['Login']
-      const html = ROUTES({
-        pathname,
-        data,
-        loading,
-        error
-       })
-       document.body.innerHTML = html
-       expect(screen.getAllByText('Administration')).toBeTruthy()
-    })
-  })
-  describe('When I navigate to Bills page', () => {
-    test(('Then, it should render Bills page'), () => {
-      const pathname = ROUTES_PATH['Bills']
-      const html = ROUTES({
-        pathname,
-        data,
-        loading,
-        error
-       })
-       document.body.innerHTML = html
-       expect(screen.getAllByText('Mes notes de frais')).toBeTruthy()
-    })
-  })
-  describe('When I navigate to NewBill page', () => {
-    test(('Then, it should render NewBill page'), () => {
-      const pathname = ROUTES_PATH['NewBill']
-      const html = ROUTES({
-        pathname,
-        data,
-        loading,
-        error
-       })
-       document.body.innerHTML = html
-       expect(screen.getAllByText('Envoyer une note de frais')).toBeTruthy()
-    })
-  })
-  describe('When I navigate to Dashboard', () => {
-    test(('Then, it should render Dashboard page'), () => {
-      const pathname = ROUTES_PATH['Dashboard']
-      const html = ROUTES({
-        pathname,
-        data,
-        loading,
-        error
-       })
-       document.body.innerHTML = html
-       expect(screen.getAllByText('Validations')).toBeTruthy()
-    })
-  })
-  describe('When I navigate to anywhere else other than Login, Bills, NewBill, Dashboard', () => {
-    test(('Then, it should render Loginpage'), () => {
-      const pathname = '/anywhere-else'
-      const html = ROUTES({
-        pathname,
-        data,
-        loading,
-        error
-       })
-       document.body.innerHTML = html
-       expect(screen.getAllByText('Administration')).toBeTruthy()
-    })
-  })
-})
+  test("should return LoginUI when pathname is '/'", () => {
+    const html = ROUTES({ pathname: ROUTES_PATH.Login });
+    expect(html).toEqual(LoginUI({}));
+  });
+
+  test("should return BillsUI when pathname is '#employee/bills'", () => {
+    const html = ROUTES({ pathname: ROUTES_PATH.Bills });
+    expect(html).toEqual(BillsUI({}));
+  });
+
+  test("should return NewBillUI when pathname is '#employee/bill/new'", () => {
+    const html = ROUTES({ pathname: ROUTES_PATH.NewBill });
+    expect(html).toEqual(NewBillUI());
+  });
+
+  test("should return DashboardUI when pathname is '#admin/dashboard'", () => {
+    window.localStorage.setItem("user", JSON.stringify({ type: "Admin" }));
+    const html = ROUTES({ pathname: ROUTES_PATH.Dashboard });
+    expect(html).toEqual(DashboardUI({}));
+  });
+
+  test("should return LoginUI when not authenticated", () => {
+    window.localStorage.clear();
+    const html = ROUTES({ pathname: ROUTES_PATH.Bills });
+    expect(html).toEqual(LoginUI({}));
+  });
+
+  test("should return LoginUI on unknown path", () => {
+    const html = ROUTES({ pathname: "#unknown/path" });
+    expect(html).toEqual(LoginUI({}));
+  });
+});
