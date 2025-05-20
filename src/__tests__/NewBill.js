@@ -12,6 +12,8 @@ jest.mock("../app/store", () => mockStore);
 
 describe("Given I am connected as an employee", () => {
   beforeEach(() => {
+    jest.clearAllMocks(); // ✅ empêche les appels cumulés entre les tests
+
     Object.defineProperty(window, "localStorage", { value: localStorageMock });
     window.localStorage.setItem(
       "user",
@@ -56,7 +58,7 @@ describe("Given I am connected as an employee", () => {
       fireEvent.change(fileInput, { target: { files: [invalidFile] } });
 
       expect(alertSpy).toHaveBeenCalledWith(
-        "Seuls les fichiers au format JPG, JPEG ou PNG sont acceptés."
+        "Seuls les fichiers .jpg, .jpeg ou .png sont autorisés." // ✅ texte corrigé
       );
       expect(fileInput.value).toBe("");
     });
@@ -96,70 +98,73 @@ describe("Given I am connected as an employee", () => {
         })
       );
     });
+
+    test("Then I should be redirected to Bills page", () => {
+      const onNavigate = jest.fn();
+      const newBill = new NewBill({
+        document,
+        onNavigate,
+        store: mockStore,
+        localStorage: window.localStorage,
+      });
+
+      const form = screen.getByTestId("form-new-bill");
+      const handleSubmit = jest.fn((e) => newBill.handleSubmit(e));
+      form.addEventListener("submit", handleSubmit);
+
+      fireEvent.submit(form);
+
+      expect(handleSubmit).toHaveBeenCalled();
+      expect(onNavigate).toHaveBeenCalledWith("#employee/bills");
+    });
+
+    test("Then it should call store.bills().update once", async () => {
+      const onNavigate = jest.fn();
+      const newBill = new NewBill({
+        document,
+        onNavigate,
+        store: mockStore,
+        localStorage: window.localStorage,
+      });
+
+      const mockUpdate = jest.spyOn(mockStore.bills(), "update");
+
+      const fileInput = screen.getByTestId("file");
+      const file = new File(["image"], "facture.png", { type: "image/png" });
+      Object.defineProperty(fileInput, "files", {
+        value: [file],
+      });
+      fireEvent.change(fileInput);
+
+      newBill.fileUrl = "url";
+      newBill.fileName = "facture.png";
+
+      fireEvent.submit(screen.getByTestId("form-new-bill"));
+
+      expect(mockUpdate).toHaveBeenCalledTimes(1);
+    });
+
+    test("Then it should display console.error on 500 error", async () => {
+      const onNavigate = jest.fn();
+      const error = new Error("Erreur 500");
+      mockStore.bills().update = jest.fn(() => Promise.reject(error));
+
+      const newBill = new NewBill({
+        document,
+        onNavigate,
+        store: mockStore,
+        localStorage: window.localStorage,
+      });
+
+      newBill.fileUrl = "http://fake.com/image.png";
+      newBill.fileName = "image.png";
+
+      const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+      fireEvent.submit(screen.getByTestId("form-new-bill"));
+
+      await new Promise(process.nextTick);
+
+      expect(consoleSpy).toHaveBeenCalledWith(error);
+    });
   });
-});
-test("Then I should be redirected to Bills page", () => {
-  const onNavigate = jest.fn();
-  const newBill = new NewBill({
-    document,
-    onNavigate,
-    store: mockStore,
-    localStorage: window.localStorage,
-  });
-
-  const form = screen.getByTestId("form-new-bill");
-  const handleSubmit = jest.fn((e) => newBill.handleSubmit(e));
-  form.addEventListener("submit", handleSubmit);
-
-  fireEvent.submit(form);
-
-  expect(handleSubmit).toHaveBeenCalled();
-  expect(onNavigate).toHaveBeenCalledWith("#employee/bills");
-});
-test("Then it should call store.bills().update once", async () => {
-  const onNavigate = jest.fn();
-  const newBill = new NewBill({
-    document,
-    onNavigate,
-    store: mockStore,
-    localStorage: window.localStorage,
-  });
-
-  const mockUpdate = jest.spyOn(mockStore.bills(), "update");
-
-  const fileInput = screen.getByTestId("file");
-  const file = new File(["image"], "facture.png", { type: "image/png" });
-  Object.defineProperty(fileInput, "files", {
-    value: [file],
-  });
-  fireEvent.change(fileInput);
-
-  // Force un fichier chargé (comme si handleChangeFile avait fonctionné)
-  newBill.fileUrl = "url";
-  newBill.fileName = "facture.png";
-
-  fireEvent.submit(screen.getByTestId("form-new-bill"));
-
-  expect(mockUpdate).toHaveBeenCalledTimes(1);
-});
-test("Then it should display console.error on 500 error", async () => {
-  const onNavigate = jest.fn();
-  const error = new Error("Erreur 500");
-  mockStore.bills().update = jest.fn(() => Promise.reject(error));
-  const newBill = new NewBill({
-    document,
-    onNavigate,
-    store: mockStore,
-    localStorage: window.localStorage,
-  });
-
-  newBill.fileUrl = "http://fake.com/image.png";
-  newBill.fileName = "image.png";
-
-  const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {});
-  fireEvent.submit(screen.getByTestId("form-new-bill"));
-
-  await new Promise(process.nextTick); // attendre la promise rejetée
-
-  expect(consoleSpy).toHaveBeenCalledWith(error);
 });
