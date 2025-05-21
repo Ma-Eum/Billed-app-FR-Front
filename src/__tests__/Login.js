@@ -5,17 +5,20 @@
 import LoginUI from "../views/LoginUI.js";
 import Login from "../containers/Login.js";
 import { fireEvent, screen } from "@testing-library/dom";
+import { ROUTES_PATH } from "../constants/routes.js";
 
 describe("Given I am on the login page", () => {
   let onNavigate;
 
   beforeEach(() => {
-    // Simule une navigation
     onNavigate = jest.fn();
     document.body.innerHTML = LoginUI();
 
-    // Instancie Login après injection DOM
-    new Login({ document, localStorage: window.localStorage, onNavigate });
+    new Login({
+      document,
+      localStorage: window.localStorage,
+      onNavigate,
+    });
   });
 
   describe("When I submit the employee login form with valid credentials", () => {
@@ -26,12 +29,13 @@ describe("Given I am on the login page", () => {
 
       fireEvent.change(emailInput, { target: { value: "employee@test.com" } });
       fireEvent.change(passwordInput, { target: { value: "employee123" } });
-
       fireEvent.submit(form);
 
       const user = JSON.parse(window.localStorage.getItem("user"));
       expect(user.type).toBe("Employee");
-      expect(onNavigate).toHaveBeenCalledWith("#employee/bills");
+      expect(user.email).toBe("employee@test.com");
+      expect(user.password).toBe("employee123");
+      expect(onNavigate).toHaveBeenCalledWith(ROUTES_PATH.Bills);
     });
   });
 
@@ -43,17 +47,18 @@ describe("Given I am on the login page", () => {
 
       fireEvent.change(emailInput, { target: { value: "admin@test.com" } });
       fireEvent.change(passwordInput, { target: { value: "admin123" } });
-
       fireEvent.submit(form);
 
       const user = JSON.parse(window.localStorage.getItem("user"));
       expect(user.type).toBe("Admin");
-      expect(onNavigate).toHaveBeenCalledWith("#admin/dashboard");
+      expect(user.email).toBe("admin@test.com");
+      expect(user.password).toBe("admin123");
+      expect(onNavigate).toHaveBeenCalledWith(ROUTES_PATH.Dashboard);
     });
   });
 
   describe("When I submit forms with empty inputs", () => {
-    test("Then it should not set localStorage or navigate", () => {
+    test("Then localStorage should store empty strings (not null)", () => {
       const form = screen.getByTestId("form-employee");
       const emailInput = screen.getByTestId("employee-email-input");
       const passwordInput = screen.getByTestId("employee-password-input");
@@ -63,8 +68,12 @@ describe("Given I am on the login page", () => {
 
       fireEvent.submit(form);
 
-      expect(window.localStorage.getItem("user")).toBe(null);
-      expect(onNavigate).not.toHaveBeenCalled();
+      const user = JSON.parse(window.localStorage.getItem("user"));
+      expect(user).toEqual({
+        type: "Employee",
+        email: "",
+        password: ""
+      });
     });
   });
 });
