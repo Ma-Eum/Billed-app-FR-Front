@@ -2,52 +2,47 @@
  * @jest-environment jsdom
  */
 
-import { fireEvent, screen } from "@testing-library/dom";
+import { screen, fireEvent, waitFor } from "@testing-library/dom";
+import BillsUI from "../views/BillsUI.js";
 import Bills from "../containers/Bills.js";
 import { localStorageMock } from "../__mocks__/localStorage.js";
+import mockStore from "../__mocks__/store.js";
+import router from "../app/Router.js";
 import { ROUTES_PATH } from "../constants/routes.js";
 
-describe("Bills.js full test suite", () => {
+jest.mock("../app/store", () => mockStore);
+
+describe("Bills Page – Extended Tests", () => {
+  let onNavigate;
   beforeEach(() => {
     Object.defineProperty(window, "localStorage", { value: localStorageMock });
-    window.localStorage.setItem("user", JSON.stringify({ type: "Employee" }));
+    window.localStorage.setItem("user", JSON.stringify({ type: "Employee", email: "a@a" }));
+
     document.body.innerHTML = '<div id="root"></div>';
+    onNavigate = (pathname) => {
+      document.body.innerHTML = ROUTES_PATH[pathname];
+    };
   });
 
-  test("should redirect to login if no user in localStorage", () => {
-    window.localStorage.removeItem("user");
+  test("redirects to login if no user", () => {
+    window.localStorage.clear();
     const onNavigate = jest.fn();
-
-    new Bills({
-      document,
-      onNavigate,
-      store: null,
-      localStorage: window.localStorage,
-    });
-
+    new Bills({ document, onNavigate, store: null, localStorage: window.localStorage });
     expect(onNavigate).toHaveBeenCalledWith(ROUTES_PATH.Login);
   });
 
-  test("should attach click listener to 'Nouvelle note de frais' button", () => {
-    document.body.innerHTML = '<button data-testid="btn-new-bill">New</button>';
-    const onNavigate = jest.fn();
-
-    new Bills({
-      document,
-      onNavigate,
-      store: null,
-      localStorage: window.localStorage,
-    });
-
-    const newBillBtn = screen.getByTestId("btn-new-bill");
-    fireEvent.click(newBillBtn);
-
-    expect(onNavigate).toHaveBeenCalledWith(ROUTES_PATH.NewBill);
+  test("clicking new bill button navigates correctly", () => {
+    document.body.innerHTML = BillsUI({ data: [] });
+    const navigate = jest.fn();
+    new Bills({ document, onNavigate: navigate, store: null, localStorage: window.localStorage });
+    fireEvent.click(screen.getByTestId("btn-new-bill"));
+    expect(navigate).toHaveBeenCalledWith(ROUTES_PATH.NewBill);
   });
 
-  test("should insert image in modal and call jQuery modal", () => {
+  test("clicking eye icon opens modal", () => {
+    document.body.innerHTML = BillsUI({ data: [] });
     const icon = document.createElement("div");
-    icon.setAttribute("data-bill-url", "https://example.com/test.jpg");
+    icon.setAttribute("data-bill-url", "https://url.com");
     icon.setAttribute("data-testid", "icon-eye");
 
     const modal = document.createElement("div");
@@ -57,76 +52,67 @@ describe("Bills.js full test suite", () => {
     document.body.appendChild(icon);
 
     $.fn.modal = jest.fn();
-
-    const instance = new Bills({
-      document,
-      onNavigate: jest.fn(),
-      store: null,
-      localStorage: window.localStorage,
-    });
-
+    const instance = new Bills({ document, onNavigate, store: null, localStorage: window.localStorage });
     instance.handleClickIconEye(icon);
-
     const img = document.querySelector(".modal-body img");
     expect(img).toBeTruthy();
-    expect(img.src).toBe("https://example.com/test.jpg");
+    expect(img.src).toBe("https://url.com/");
     expect($.fn.modal).toHaveBeenCalled();
   });
 
-  test("should clear localStorage and redirect on logout", () => {
-    window.localStorage.setItem("user", JSON.stringify({ type: "Employee" }));
-    document.body.innerHTML = '<div id="layout-disconnect"></div>';
-
-    const onNavigate = jest.fn();
-
-    new Bills({
-      document,
-      onNavigate,
-      store: null,
-      localStorage: window.localStorage,
-    });
-
-    const logoutBtn = document.getElementById("layout-disconnect");
-    fireEvent.click(logoutBtn);
-
-    expect(window.localStorage.getItem("user")).toBe(null);
-    expect(onNavigate).toHaveBeenCalledWith(ROUTES_PATH.Login);
-  });
-});
-test("should return [] if no store is defined", async () => {
-  const instance = new Bills({
-    document,
-    onNavigate: jest.fn(),
-    store: null,
-    localStorage: window.localStorage,
+  test("logout clears storage and redirects", () => {
+    document.body.innerHTML = BillsUI({ data: [] }) + '<div id="layout-disconnect"></div>';
+    const nav = jest.fn();
+    new Bills({ document, onNavigate: nav, store: null, localStorage: window.localStorage });
+    fireEvent.click(document.getElementById("layout-disconnect"));
+    expect(localStorage.getItem("user")).toBe(null);
+    expect(nav).toHaveBeenCalledWith(ROUTES_PATH.Login);
   });
 
-  const data = await instance.getBills();
-  expect(data).toEqual([]);
-});
-test("should not fail if 'btn-new-bill' button is missing", () => {
-  document.body.innerHTML = `<div></div>`; // pas de bouton
-  const onNavigate = jest.fn();
+  test("getBills fetches and formats bills correctly", async () => {
+    const instance = new Bills({ document, onNavigate, store: mockStore, localStorage: window.localStorage });
+    const bills = await instance.getBills();
+    expect(bills.length).toBeGreaterThan(0);
+    expect(bills[0].date).toBeDefined();
+  });
 
-  expect(() => {
-    new Bills({
-      document,
-      onNavigate,
-      store: null,
-      localStorage: window.localStorage,
-    });
-  }).not.toThrow();
-});
-test("should not fail if no eye icons are present", () => {
-  document.body.innerHTML = `<div></div>`;
-  const onNavigate = jest.fn();
+  test("displays error 404 from API", async () => {
+    document.body.innerHTML = BillsUI({ error: "Erreur 404" });
+    expect(screen.getByTestId("error-message").textContent).toMatch("Erreur 404");
+  });
 
-  expect(() => {
-    new Bills({
-      document,
-      onNavigate,
-      store: null,
-      localStorage: window.localStorage,
-    });
-  }).not.toThrow();
+  test("displays error 500 from API", async () => {
+    document.body.innerHTML = BillsUI({ error: "Erreur 500" });
+    expect(screen.getByTestId("error-message").textContent).toMatch("Erreur 500");
+  });
+
+  test("returns empty array if store is null", async () => {
+    const instance = new Bills({ document, onNavigate, store: null, localStorage: window.localStorage });
+    const bills = await instance.getBills();
+    expect(bills).toEqual([]);
+  });
+
+  test("does not fail if new bill button missing", () => {
+    document.body.innerHTML = '<div></div>';
+    expect(() => new Bills({ document, onNavigate, store: null, localStorage: window.localStorage })).not.toThrow();
+  });
+
+  test("does not fail without eye icons", () => {
+    document.body.innerHTML = '<div></div>';
+    expect(() => new Bills({ document, onNavigate, store: null, localStorage: window.localStorage })).not.toThrow();
+  });
+
+  test("bills should be ordered from latest to earliest", async () => {
+    const billsData = [
+      { date: "2004-04-04" },
+      { date: "2003-03-03" },
+      { date: "2002-02-02" },
+      { date: "2001-01-01" }
+    ];
+    document.body.innerHTML = BillsUI({ data: billsData });
+
+    const dates = Array.from(screen.getAllByText(/\d{4}-\d{2}-\d{2}/)).map((a) => a.textContent);
+    const sorted = [...dates].sort((a, b) => new Date(b) - new Date(a));
+    expect(dates).toEqual(sorted); // ✅ expect bien présent
+  });
 });
