@@ -19,14 +19,45 @@ const row = (bill) => {
     `)
   }
 
+const normalizeDate = (dateStr) => {
+  const months = {
+    "Jan.": "01",
+    "Fév.": "02",
+    "Mar.": "03",
+    "Avr.": "04",
+    "Mai": "05",
+    "Juin": "06",
+    "Juil.": "07",
+    "Août": "08",
+    "Sep.": "09",
+    "Oct.": "10",
+    "Nov.": "11",
+    "Déc.": "12"
+  };
+
+  const parts = dateStr.split(" ");
+  if (parts.length !== 3) return dateStr;
+
+  const day = parts[0].padStart(2, "0");
+  const month = months[parts[1]] || "01";
+  const year = "20" + parts[2]; // ex: 04 => 2004
+
+  return `${year}-${month}-${day}`;
+};
+
 // Helper function to render all rows after sorting bills by date
 const rows = (data) => {
   if (data && data.length) {
-    // Sort bills by date in descending order before rendering
-    const sortedData = data.sort((a, b) => new Date(b.date) - new Date(a.date));
-    
-    // Log to verify the order of bills
-    // console.log("Sorted bills in BillsUI:", sortedData.map(bill => bill.date));
+
+    console.log("Données brutes avant tri :", data.map(b => b.date));
+
+    const sortedData = [...data].sort((a, b) => {
+      const dateA = new Date(normalizeDate(a.date));
+      const dateB = new Date(normalizeDate(b.date));
+      return dateA - dateB; // tri décroissant
+    });
+
+    console.log("Données après tri JS :", sortedData.map(b => b.date));
 
     return sortedData.map(bill => row(bill)).join("");
   }
