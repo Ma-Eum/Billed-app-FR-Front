@@ -54,7 +54,7 @@ const rows = (data) => {
     const sortedData = [...data].sort((a, b) => {
       const dateA = new Date(normalizeDate(a.date));
       const dateB = new Date(normalizeDate(b.date));
-      return dateA - dateB; // tri décroissant
+      return dateB - dateA; // tri décroissant
     });
 
     console.log("Données après tri JS :", sortedData.map(b => b.date));

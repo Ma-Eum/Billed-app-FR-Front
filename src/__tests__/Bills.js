@@ -102,40 +102,44 @@ describe("Bills Page – Extended Tests", () => {
     expect(() => new Bills({ document, onNavigate, store: null, localStorage: window.localStorage })).not.toThrow();
   });
 
-  test("bills should be ordered from latest to earliest", async () => {
-    const billsData = [
-      { date: "2004-04-04" },
-      { date: "2003-03-03" },
-      { date: "2002-02-02" },
-      { date: "2001-01-01" }
-    ];
-    document.body.innerHTML = BillsUI({ data: billsData });
+test("bills should be ordered from latest to earliest", () => {
+  const billsData = [
+    { date: "2004-04-04" },
+    { date: "2003-03-03" },
+    { date: "2002-02-02" },
+    { date: "2001-01-01" }
+  ];
 
-    const dates = Array.from(screen.getAllByText(/\d{4}-\d{2}-\d{2}/)).map((a) => a.textContent);
-    const sorted = [...dates].sort((a, b) => new Date(b) - new Date(a));
-    expect(dates).toEqual(sorted);
-  });
+  document.body.innerHTML = BillsUI({ data: billsData });
 
-test("integration GET: should fetch and display bills", async () => {
-  window.localStorage.setItem("user", JSON.stringify({ type: "Employee", email: "a@a" }));
+  const tbody = screen.getByTestId("tbody");
+  const rows = Array.from(tbody.querySelectorAll("tr"));
+  const datesOnScreen = rows.map(row => row.children[2].textContent.trim());
 
-  // 🛠️ CORRECTION ICI
-  window.onNavigate = (pathname) => {
-    document.body.innerHTML = ROUTES_PATH[pathname];
-  };
+  const sortedDates = [...datesOnScreen].sort((a, b) => new Date(b) - new Date(a));
 
-  const instance = new Bills({
-    document,
-    onNavigate: window.onNavigate,
-    store: mockStore,
-    localStorage: window.localStorage,
-  });
-
-  const bills = await instance.getBills();
-
-  expect(bills.length).toBeGreaterThan(0);
-  expect(bills[0]).toHaveProperty("id");
-  expect(bills[0]).toHaveProperty("date");
+  expect(datesOnScreen).toEqual(sortedDates);
 });
 
+
+  test("integration GET: should fetch and display bills", async () => {
+    window.localStorage.setItem("user", JSON.stringify({ type: "Employee", email: "a@a" }));
+
+    window.onNavigate = (pathname) => {
+      document.body.innerHTML = ROUTES_PATH[pathname];
+    };
+
+    const instance = new Bills({
+      document,
+      onNavigate: window.onNavigate,
+      store: mockStore,
+      localStorage: window.localStorage,
+    });
+
+    const bills = await instance.getBills();
+
+    expect(bills.length).toBeGreaterThan(0);
+    expect(bills[0]).toHaveProperty("id");
+    expect(bills[0]).toHaveProperty("date");
+  });
 });
