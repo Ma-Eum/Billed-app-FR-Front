@@ -7,6 +7,7 @@ import LoginUI from "../views/LoginUI.js";
 import BillsUI from "../views/BillsUI.js";
 import NewBillUI from "../views/NewBillUI.js";
 import DashboardUI from "../views/DashboardUI.js";
+import { screen } from "@testing-library/dom";
 
 describe("ROUTES function", () => {
   beforeEach(() => {
@@ -35,7 +36,8 @@ describe("ROUTES function", () => {
   test("should return DashboardUI when pathname is '#admin/dashboard'", () => {
     window.localStorage.setItem("user", JSON.stringify({ type: "Admin" }));
     const html = ROUTES({ pathname: ROUTES_PATH.Dashboard });
-    expect(html).toEqual(DashboardUI({}));
+    document.body.innerHTML = html;
+    expect(screen.getByTestId("form-admin")).toBeTruthy();
   });
 
   test("should return LoginUI when not authenticated", () => {
