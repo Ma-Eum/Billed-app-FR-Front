@@ -113,6 +113,29 @@ describe("Bills Page – Extended Tests", () => {
 
     const dates = Array.from(screen.getAllByText(/\d{4}-\d{2}-\d{2}/)).map((a) => a.textContent);
     const sorted = [...dates].sort((a, b) => new Date(b) - new Date(a));
-    expect(dates).toEqual(sorted); // ✅ expect bien présent
+    expect(dates).toEqual(sorted);
   });
+
+test("integration GET: should fetch and display bills", async () => {
+  window.localStorage.setItem("user", JSON.stringify({ type: "Employee", email: "a@a" }));
+
+  // 🛠️ CORRECTION ICI
+  window.onNavigate = (pathname) => {
+    document.body.innerHTML = ROUTES_PATH[pathname];
+  };
+
+  const instance = new Bills({
+    document,
+    onNavigate: window.onNavigate,
+    store: mockStore,
+    localStorage: window.localStorage,
+  });
+
+  const bills = await instance.getBills();
+
+  expect(bills.length).toBeGreaterThan(0);
+  expect(bills[0]).toHaveProperty("id");
+  expect(bills[0]).toHaveProperty("date");
+});
+
 });
